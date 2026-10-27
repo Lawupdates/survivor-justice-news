@@ -1,0 +1,26 @@
+name: Create full website backup
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/create-backup.yml'
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Archive all repository files
+        run: |
+          set -e
+          mkdir -p backup
+          git archive --format=zip --output="backup/${{ github.event.repository.name }}-main.zip" HEAD
+          unzip -t "backup/${{ github.event.repository.name }}-main.zip" | tail -n 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-website-backup
+          path: backup/*.zip
+          retention-days: 30
