@@ -35,6 +35,7 @@ def collect():
                     items[item["url"]] = item
         except (ValueError, OSError, AttributeError):
             pass
+    successful_feeds = 0
     for query in QUERIES:
         qs = urllib.parse.urlencode({"q":query,"hl":"en-US","gl":"US","ceid":"US:en"})
         url = "https://news.google.com/rss/search?" + qs
@@ -45,6 +46,7 @@ def collect():
         except Exception as exc:
             print("Feed unavailable:", query, str(exc)[:120])
             continue
+        successful_feeds += 1
         for entry in root.findall("./channel/item"):
             title = html.unescape((entry.findtext("title") or "").strip())[:240]
             link = (entry.findtext("link") or "").strip()
@@ -55,6 +57,8 @@ def collect():
             if link not in items:
                 items[link] = {"title":title,"url":link,"source":source,
                                "published":published,"status":"Unreviewed news lead"}
+    if successful_feeds == 0:
+        raise RuntimeError("All news feeds failed; preserving the previous collection and timestamp")
     values = sorted(items.values(), key=lambda x:x.get("published",""),reverse=True)[:500]
     OUT.write_text(json.dumps({"updated": dt.datetime.now(dt.timezone.utc).isoformat(),
                                "items": values},ensure_ascii=False,indent=2)+"\n")
